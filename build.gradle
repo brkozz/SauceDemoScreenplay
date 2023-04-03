@@ -1,0 +1,57 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'net.serenity-bdd.aggregator'
+
+group 'com.saucedemo'
+version '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+ext {
+    serenityVersion = '3.2.3'
+    junitVersion = '5.9.2'
+    slf4jVersion = '2.0.7'
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        configurations.all {
+            exclude group: 'org.codehaus.groovy', module: 'groovy'
+        }
+        classpath "net.serenity-bdd:serenity-gradle-plugin:2.4.34"
+        classpath "net.serenity-bdd:serenity-single-page-report:3.6.22"
+    }
+}
+
+serenity {
+    reports = ["single-page-html"]
+}
+
+dependencies {
+
+
+    testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+
+
+    implementation group: 'net.serenity-bdd', name: 'serenity-core', version: "${serenityVersion}"
+    implementation group: 'net.serenity-bdd', name: 'serenity-junit', version: "${serenityVersion}"
+    testImplementation group: 'net.serenity-bdd', name: 'serenity-cucumber', version: "${serenityVersion}"
+    implementation group: 'net.serenity-bdd', name: 'serenity-screenplay', version: "${serenityVersion}"
+    implementation group: 'net.serenity-bdd', name: 'serenity-screenplay-webdriver', version: "${serenityVersion}"
+    testImplementation group: 'org.slf4j', name: 'slf4j-simple', version: "${slf4jVersion}"
+
+}
+
+gradle.startParameter.continueOnFailure = true
+test.finalizedBy(aggregate, reports)
