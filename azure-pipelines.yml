@@ -1,5 +1,5 @@
 trigger:
-- master
+- main
 
 pool:
   vmImage: 'ubuntu-latest'
@@ -16,25 +16,23 @@ stages:
   - job: Build
     displayName: 'Build Job'
     steps:
-    - task: UseJava@1
-      inputs:
-        versionSpec: '11'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
-        jdkUserInputPath: '$(JAVA_HOME)'
-        checkLatest: false
-
-    - task: Gradle@2
-      inputs:
-        gradleWrapperFile: 'gradlew'
-        options: '-Dorg.gradle.daemon=false'
-        tasks: 'clean build'
-        publishJUnitResults: true
-        testResultsFiles: '**/TEST-*.xml'
-        javaHomeOption: 'JDKVersion'
-        jdkVersionOption: '11'
-        jdkArchitectureOption: 'x64'
-    
+    - script: |
+        sudo apt-get update -y
+        sudo apt-get install -y openjdk-11-jdk
+        echo "##vso[task.setvariable variable=JAVA_HOME]$(readlink -f /usr/bin/java | sed "s:/bin/java::")"
+        java -version
+      displayName: 'Install Java JDK 11'
+      
+    - script: |
+        wget https://services.gradle.org/distributions/gradle-7.6-bin.zip
+        sudo mkdir /opt/gradle
+        sudo unzip -d /opt/gradle gradle-7.6-bin.zip
+        echo "##vso[task.setvariable variable=GRADLE_HOME]/opt/gradle/gradle-7.6"
+        echo "export PATH=\$PATH:/opt/gradle/gradle-7.6/bin" >> ~/.bashrc
+        source ~/.bashrc
+        gradle -v
+      displayName: 'Install Gradle'
+      
     - script: |
         ./gradlew clean test aggregate
       displayName: 'Run Serenity Tests'
