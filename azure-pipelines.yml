@@ -1,19 +1,53 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
 - master
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'
 
-steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+variables:
+  JAVA_HOME: '/usr/lib/jvm/adoptopenjdk-11-hotspot-amd64'
+  GRADLE_HOME: '/usr/share/gradle'
+  GRADLE_USER_HOME: '$(System.DefaultWorkingDirectory)/.gradle'
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+stages:
+- stage: BuildAndTest
+  displayName: 'Build and Test'
+  jobs:
+  - job: Build
+    displayName: 'Build Job'
+    steps:
+    - task: UseJava@1
+      inputs:
+        versionSpec: '11'
+        jdkArchitectureOption: 'x64'
+        jdkSourceOption: 'PreInstalled'
+        jdkUserInputPath: '$(JAVA_HOME)'
+        checkLatest: false
+
+    - task: Gradle@2
+      inputs:
+        gradleWrapperFile: 'gradlew'
+        options: '-Dorg.gradle.daemon=false'
+        tasks: 'clean build'
+        publishJUnitResults: true
+        testResultsFiles: '**/TEST-*.xml'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '11'
+        jdkArchitectureOption: 'x64'
+    
+    - script: |
+        ./gradlew clean test aggregate
+      displayName: 'Run Serenity Tests'
+
+    - task: PublishTestResults@2
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/build/test-results/test/TEST-*.xml'
+        failTaskOnFailedTests: true
+        testRunTitle: 'Serenity BDD Test Results'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: '$(System.DefaultWorkingDirectory)/target/site/serenity'
+        artifactName: 'SerenityReports'
+        publishLocation: 'Container'
